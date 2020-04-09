@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	getter "github.com/hashicorp/go-getter"
 	"github.com/pivotal/cloud-service-broker/utils"
 	"github.com/pivotal/cloud-service-broker/utils/stream"
-	getter "github.com/hashicorp/go-getter"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 )
@@ -50,7 +50,7 @@ func fetchBrokerpak(src, dest string) error {
 	}
 
 	client := newFileGetterClient(src, dest)
-	client.Getters["gs"] = &gsGetter{}
+	client.Getters = getters
 	client.Pwd = execDir
 
 	return client.Get()
@@ -131,4 +131,13 @@ func (gsGetter) client(ctx context.Context) (*storage.Client, error) {
 		return nil, fmt.Errorf("couldn't connect to Cloud Storage: %v", err)
 	}
 	return client, nil
+}
+
+var getters = map[string]getter.Getter{
+	"file":  new(getter.FileGetter),
+	"git":   new(getter.GitGetter),
+	"gs":    &gsGetter{},
+	"s3":    new(getter.S3Getter),
+	"http":  new(getter.HttpGetter),
+	"https": new(getter.HttpGetter),
 }
