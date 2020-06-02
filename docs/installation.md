@@ -1,6 +1,5 @@
 ## Installation
 
-See [this YouTube video](https://www.youtube.com/watch?v=8nc4624K91A&list=PLIivdWyY5sqKJ48ycao632rEDuVbFm8yJ&index=3) for a demo of installing and using the broker.
 
 Requires Go 1.14 and the associated buildpack.
 
@@ -39,9 +38,6 @@ Enable the following services in **[APIs and services > Library](https://console
 (https://console.cloud.google.com/apis/library/sql-component.googleapis.com)
 1. If you want to enable BigQuery as a service, enable the [BigQuery API](https://console.cloud.google.com/apis/api/bigquery/overview)
 1. If you want to enable Cloud Storage as a service, enable the [Cloud Storage API](https://console.cloud.google.com/apis/api/storage_component/overview)
-1. If you want to enable Pub/Sub as a service, enable the [Cloud Pub/Sub API](https://console.cloud.google.com/apis/api/pubsub/overview)
-1. If you want to enable Bigtable as a service, enable the [Bigtable Admin API](https://console.cloud.google.com/apis/api/bigtableadmin/overview)
-1. If you want to enable Datastore as a service, enable the [Datastore API](https://console.cloud.google.com/apis/api/datastore.googleapis.com/overview)
 
 #### [Create a root service account](#service-account)
 
