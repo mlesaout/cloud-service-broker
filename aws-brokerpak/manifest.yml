@@ -6,6 +6,8 @@ metadata:
 platforms:
 - os: linux
   arch: amd64
+# - os: darwin
+#   arch: amd64  
 terraform_binaries:
 - name: terraform
   version: 0.12.23
@@ -22,6 +24,13 @@ terraform_binaries:
 - name: terraform-provider-postgresql
   version: 1.5.0
   source: https://github.com/terraform-providers/terraform-provider-postgresql/archive/v1.5.0.zip
+- name: terraform-provider-null
+  version: 2.1.2
+  source: https://releases.hashicorp.com/terraform-provider-null/2.1.2/terraform-provider-null_2.1.2_linux_amd64.zip  
+- name: psqlcmd
+  version: 0.1.0
+  source: https://packages.microsoft.com/config/rhel/7/packages-microsoft-prod.rpm
+  url_template: ../build/${name}_${version}_${os}_${arch}.zip
 env_config_mapping:
   AWS_ACCESS_KEY_ID: aws.access_key_id
   AWS_SECRET_ACCESS_KEY: aws.secret_access_key
@@ -31,6 +40,8 @@ service_definitions:
 - aws-redis-cluster.yml
 - aws-postgresql.yml
 - aws-s3-bucket.yml
+- aws-sqlserver.yml
+
 
 
 

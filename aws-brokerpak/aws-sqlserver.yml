@@ -1,0 +1,236 @@
+# Copyright 2018 the Service Broker Project Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http:#www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+version: 1
+name: csb-aws-sqlserver
+id: e5168182-e272-11ea-a40e-93457ea5d709
+description: Amazon RDS for Microsoft SQL Server
+display_name: Amazon RDS for Microsoft SQL Server
+image_url: https://d1.awsstatic.com/logos/rds/200x100_Microsoft-SQL-Server_Logo_v2.80f16c4207b8b79c1b13c8435868213a8b7131cc.png
+documentation_url: https://aws.amazon.com/rds/sqlserver/
+support_url: https://aws.amazon.com/rds/sqlserver/resources/?nc=sn&loc=5
+tags: [aws, sqlserver, preview]
+plans:
+- name: sqlserver-xe
+  id: 12ca408e-e17c-11ea-b183-1b8f5e76d422
+  description: 'Affordable database management system that supports database sizes up to 10 GB.'
+  display_name: "SQL Server Express Edition"
+  properties:
+    engine: sqlserver-ex
+    engine_version: 14.00.3223.3.v1
+    storage_gb: 20
+- name: sqlserver-web
+  id: f11cd6ba-e17e-11ea-9529-336e688d0943
+  description: 'In accordance with Microsoft''s licensing policies, it can only be used to support public and Internet-accessible webpages, websites, web applications, and web services.'
+  display_name: "SQL Server Web Edition"
+  properties:
+    engine: sqlserver-web
+    engine_version: 14.00.3223.3.v1
+    storage_gb: 50
+- name: sqlserver-se
+  id: f6c6e146-e17e-11ea-9c93-6324e4b7dc9b
+  description: 'Core data management and business intelligence capabilities for mission-critical applications and mixed workloads.'
+  display_name: "SQL Server Standard Edition"
+  properties:
+    engine: sqlserver-se
+    engine_version: 14.00.3223.3.v1
+    storage_gb: 100
+- name: sqlserver-ee
+  id: fe67e6e8-e17e-11ea-8d81-c3ff115b5c64
+  description: 'Comprehensive high-end capabilities for mission-critical applications with demanding database workloads and business intelligence requirements.'
+  display_name: "SQL Server Enterprise Edition"
+  properties:
+    engine: sqlserver-ee
+    engine_version: 14.00.3223.3.v1
+    storage_gb: 150
+provision:
+  plan_inputs:
+  - field_name: engine
+    required: true
+    type: string
+    details: The version for the sqlserver instance.
+    default: sqlserver-ex
+  - field_name: engine_version
+    required: true
+    type: string
+    details: The version for the sqlserver instance.
+    default: 14.00.3223.3.v1  
+  - field_name: storage_gb
+    required: true
+    type: number
+    details: Size of storage volume for service instance.
+    defualt: 20
+    constraints:
+      maximum: 4096
+      minumum: 5
+  user_inputs:
+  - field_name: instance_name
+    type: string
+    details: Name for your sqlserver instance
+    default: csb-sqlserver-${request.instance_id}
+    constraints:
+      maxLength: 98
+      minLength: 6
+      pattern: ^[a-z][a-z0-9-]+$
+  - field_name: db_name
+    type: string
+    details: Name for your database
+    default: vsbdb
+    constraints:
+      maxLength: 64
+  - field_name: publicly_accessible
+    type: boolean
+    details: Make instance public if true
+    default: false
+  - field_name: port
+    type: number
+    details: SqlSever Port
+    default: 1433    
+  - field_name: region
+    type: string
+    details: The region of the sqlserver instance.
+    default: us-west-2
+    enum: 
+      us-east-2 : us-east-2
+      us-east-1 : us-east-1
+      us-west-1 : us-west-1
+      us-west-2 : us-west-2
+      ap-east-1 : ap-east-1
+      ap-south-1 : ap-south-1
+      ap-northeast-3 : ap-northeast-3
+      ap-northeast-2 : ap-northeast-2
+      ap-southeast-1 : ap-southeast-1
+      ap-southeast-2 : ap-southeast-2
+      ap-northeast-1 : ap-northeast-1
+      ca-central-1 : ca-central-1
+      cn-north-1 : cn-north-1
+      cn-northwest-1 : cn-northwest-1
+      eu-central-1 : eu-central-1
+      eu-west-1 : eu-west-1
+      eu-west-2 : eu-west-2
+      eu-west-3 : eu-west-3
+      eu-north-1 : eu-north-1
+      me-south-1 : me-south-1
+      sa-east-1 : sa-east-1
+  - field_name: multi_az
+    type: boolean
+    details: Make instance multi AZ if true (see https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZ.html)
+    default: false
+  - field_name: aws_access_key_id
+    type: string
+    details: AWS access key
+    default: ${config("aws.access_key_id")}
+  - field_name: aws_secret_access_key
+    type: string
+    details: AWS secret key
+    default: ${config("aws.secret_access_key")}
+  - field_name: aws_vpc_id
+    details: VPC ID for instance
+    default: ""  
+  - field_name: instance_class
+    type: string
+    details: AWS DB instance class (see https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.DBInstanceClass.html) Will be computed from cache_size if empty.
+    default: "db.t3.xlarge"    
+  - field_name: timezone
+    type: string
+    details: timezone
+    default: "Greenwich Standard Time"
+  - field_name: license_model
+    type: string
+    details: license-included
+    default: "license-included"         
+  computed_inputs:
+  - name: labels
+    default: ${json.marshal(request.default_labels)}
+    overwrite: true
+    type: object
+  - name: engine
+    default: sqlserver-ex
+    overwrite: true
+    type: string
+  - name: engine_version
+    default: ${engine_version}
+    overwrite: true
+    type: string        
+  template_ref: terraform/aws-rds-mssqlserver-provision.tf
+  outputs:
+  - field_name: name
+    type: string
+    details: The name of the database.
+  - field_name: hostname
+    type: string
+    details: Hostname or IP address of the exposed sqlserver endpoint used by clients to connect to the service.
+  - field_name: port
+    type: integer
+    details: The port number of the exposed sqlserver instance.
+  - field_name: username
+    type: string
+    details: The username to authenticate to the database instance.
+  - field_name: password
+    type: string
+    details: The password to authenticate to the database instance.
+bind:
+  plan_inputs: []
+  user_inputs: []
+  computed_inputs:
+  - name: mssql_db_name
+    type: string
+    default: ${instance.details["name"]}
+    overwrite: true
+  - name: mssql_hostname
+    type: string
+    default: ${instance.details["hostname"]}
+    overwrite: true
+  - name: mssql_port
+    type: integer
+    default: ${instance.details["port"]}
+    overwrite: true
+  - name: admin_username
+    type: string
+    default: ${instance.details["username"]}
+    overwrite: true
+  - name: admin_password
+    type: string
+    default: ${instance.details["password"]}
+    overwrite: true
+  template_ref: terraform/bind-mssql.tf
+  outputs: 
+  - field_name: username
+    type: string
+    details: The username to authenticate to the database instance.
+  - field_name: password
+    type: string
+    details: The password to authenticate to the database instance.  
+  - field_name: uri
+    type: string
+    details: The uri to connect to the database instance and database.
+  - field_name: jdbcUrl
+    type: string
+    details: The jdbc url to connect to the database instance and database.    
+  - field_name: jdbcUrlForAuditingEnabled
+    type: string
+    details: The audit enabled JDBC URL to connect to the database server and database.    
+  - field_name: databaseLogin
+    type: string
+    details: The username to authenticate to the database server.
+  - field_name: databaseLoginPassword
+    type: string
+    details: The password to authenticate to the database server.   
+examples:
+- name: sqlserver-xe
+  description: Create a small sqlserver-xe
+  plan_id: 12ca408e-e17c-11ea-b183-1b8f5e76d422
+  provision_params: { "publicly_accessible": true }
+  bind_params: {}
+
