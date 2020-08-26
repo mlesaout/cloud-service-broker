@@ -15,35 +15,7 @@
 variable postgres_db_name { type = string }
 variable postgres_hostname { type = string }
 variable postgres_port { type = number }
-variable admin_username { type = string }
-variable admin_password { type = string }
-
-locals {
-  
-   table_privileges = [
-    "DELETE",
-    "INSERT",
-    "REFERENCES",
-    "SELECT",
-    "TRIGGER",
-    "TRUNCATE",
-    "UPDATE"
-  ]
-  sequence_privileges = [
-    "SELECT",
-    "UPDATE",
-    "USAGE"
-  ]
-}
-
-provider "postgresql" {
-  host            = var.postgres_hostname
-  port            = var.postgres_port
-  username        = var.admin_username
-  password        = var.admin_password
-  superuser       = false
-  database        = var.postgres_db_name
-}
+variable db_instance_name { type = string }
 
 resource "random_string" "username" {
   length = 16
@@ -59,36 +31,12 @@ resource "random_password" "password" {
   min_special = 2
 }
 
-// Create postgres role and db
-resource "postgresql_role" "app_role" {
-  login               = true
-  name                = random_string.username.result
-  password            = random_password.password.result
-  skip_reassign_owned = true
-  skip_drop_role = true
-  
+resource "google_sql_user" "user" {
+  name     = random_string.username.result
+  instance = var.db_instance_name
+  host     = var.postgres_hostname
+  password = random_password.password.result
 }
-
-resource "postgresql_default_privileges" "app_tables" {
-  database    = var.postgres_db_name
-  depends_on  = [postgresql_role.app_role]
-  object_type = "table"
-  owner       = var.admin_username
-  privileges  = local.table_privileges
-  role        = postgresql_role.app_role.name
-  schema      = "public"
-}
-
-resource "postgresql_default_privileges" "app_sequence" {
-  database    = var.postgres_db_name
-  depends_on  = [postgresql_role.app_role]
-  object_type = "sequence"
-  owner       = var.admin_username
-  privileges  = local.sequence_privileges
-  role        = postgresql_role.app_role.name
-  schema      = "public"
-}
-
 
 output username { value = random_string.username.result }
 output password { value = random_password.password.result }

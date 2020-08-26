@@ -29,26 +29,25 @@ provider "google" {
   version = ">=3.17.0"
   credentials = var.credentials
   project     = var.project
-  
 }
 
 data "google_compute_network" "authorized-network" {
   name = var.authorized_network
 }
 
-# resource "google_compute_global_address" "private_ip_address" {
-#   name          = "priv-ip-addr-${var.instance_name}"
-#   purpose       = "VPC_PEERING"
-#   address_type  = "INTERNAL"
-#   prefix_length = 24
-#   network       = data.google_compute_network.authorized-network.self_link
-# }
+resource "google_compute_global_address" "private_ip_address" {
+  name          = "priv-ip-addr-${var.instance_name}"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 24
+  network       = data.google_compute_network.authorized-network.self_link
+}
 
-# resource "google_service_networking_connection" "private_vpc_connection" {
-#   network                 = data.google_compute_network.authorized-network.self_link
-#   service                 = "servicenetworking.googleapis.com"
-#   reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
-# }
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = data.google_compute_network.authorized-network.self_link
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
+}
 
 locals {
   service_tiers = {
@@ -71,7 +70,7 @@ resource "google_sql_database_instance" "instance" {
   database_version = var.database_version
   region           = var.region
 
-  # depends_on = [google_service_networking_connection.private_vpc_connection]
+  depends_on = [google_service_networking_connection.private_vpc_connection]
 
   settings {
     tier = local.service_tiers[var.cores]
@@ -90,26 +89,25 @@ resource "google_sql_database" "database" {
   instance = google_sql_database_instance.instance.name
 }
 
-resource "random_string" "username" {
-  length = 16
-  special = false
-}
+# resource "random_string" "username" {
+#   length = 16
+#   special = false
+# }
 
-resource "random_password" "password" {
-  length = 16
-  special = true
-  override_special = "_@"
-}
+# resource "random_password" "password" {
+#   length = 16
+#   special = true
+#   override_special = "_@"
+# }
 
-resource "google_sql_user" "admin_user" {
-  name     = random_string.username.result
-  instance = google_sql_database_instance.instance.name
-  password = random_password.password.result
-}
+# resource "google_sql_user" "admin_user" {
+#   name     = random_string.username.result
+#   instance = google_sql_database_instance.instance.name
+#   password = random_password.password.result
+# }
 
-output name { value = "${google_sql_database.database.name}" }
-output hostname { value = "${google_sql_database_instance.instance.first_ip_address}" }
+output name { value = google_sql_database.database.name }
+output hostname { value = google_sql_database_instance.instance.first_ip_address }
 
-output port { value = (var.database_version == "POSTGRES_11" ? 5432 : 3306  ) }
-output username { value = "${google_sql_user.admin_user.name}" }
-output password { value = "${google_sql_user.admin_user.password}" }
+output port { value = var.database_version == "POSTGRES_11" ? 5432 : 3306 }
+output db_instance_name { value = google_sql_database_instance.instance.name }

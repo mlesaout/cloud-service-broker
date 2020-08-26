@@ -139,12 +139,9 @@ provision:
   - field_name: port
     type: integer
     details: The port number of the exposed mysql instance.
-  - field_name: username
+  - field_name: db_instance_name
     type: string
-    details: The username to authenticate to the database instance.
-  - field_name: password
-    type: string
-    details: The password to authenticate to the database instance.
+    details: GCP database intance name
 bind:
   plan_inputs: []
   user_inputs: []
