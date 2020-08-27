@@ -34,7 +34,7 @@ resource "random_password" "password" {
 resource "google_sql_user" "user" {
   name     = random_string.username.result
   instance = var.db_instance_name
-  host     = var.postgres_hostname
+#   host     = var.postgres_hostname
   password = random_password.password.result
 }
 

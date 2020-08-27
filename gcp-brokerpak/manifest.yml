@@ -6,18 +6,18 @@ metadata:
 platforms:
 - os: linux
   arch: amd64 
-- os: darwin
-  arch: amd64 
+# - os: darwin
+#   arch: amd64 
 terraform_binaries:
 - name: terraform
-  version: 0.12.20
-  source: https://github.com/hashicorp/terraform/archive/v0.12.20.zip  
+  version: 0.12.29
+  source: https://github.com/hashicorp/terraform/archive/v0.12.29.zip  
 - name: terraform-provider-google
-  version: 3.17.0
-  source: https://github.com/terraform-providers/terraform-provider-google/archive/v3.17.0.zip
+  version: 3.36.0
+  source: https://github.com/terraform-providers/terraform-provider-google/archive/v3.36.0.zip
 - name: terraform-provider-google-beta
-  version: 3.22.0
-  source: https://github.com/terraform-providers/terraform-provider-google-beta/archive/v3.22.0.zip  
+  version: 3.36.0
+  source: https://github.com/terraform-providers/terraform-provider-google-beta/archive/v3.36.0.zip  
 - name: terraform-provider-random
   version: 2.2.1
   source: https://releases.hashicorp.com/terraform-provider-random/2.2.1/terraform-provider-random_2.2.1_linux_amd64.zip
