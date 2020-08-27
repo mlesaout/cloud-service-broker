@@ -20,7 +20,8 @@ variable db_name { type = string }
 variable region { type = string }
 variable labels { type = map }
 variable storage_gb { type = number }
-variable database_version { type = string }
+variable db_engine { type = string }
+variable db_version { type = string }
 
 variable credentials  { type = string }
 variable project  { type = string }
@@ -62,12 +63,11 @@ locals {
     0.6   = "db-f1-micro" 
     1.7   = "db-g1-small" 
   }   
-
 }
 
 resource "google_sql_database_instance" "instance" {
   name             = var.instance_name
-  database_version = var.database_version
+  database_version = format("%s_%s", var.db_engine, var.db_version)
   region           = var.region
 
   depends_on = [google_service_networking_connection.private_vpc_connection]
@@ -109,5 +109,5 @@ resource "google_sql_database" "database" {
 output name { value = google_sql_database.database.name }
 output hostname { value = google_sql_database_instance.instance.first_ip_address }
 
-output port { value = var.database_version == "POSTGRES_11" ? 5432 : 3306 }
+output port { value = var.db_engine == "POSTGRES" ? 5432 : 3306 }
 output db_instance_name { value = google_sql_database_instance.instance.name }

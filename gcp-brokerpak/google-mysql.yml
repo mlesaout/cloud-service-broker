@@ -29,7 +29,7 @@ plans:
   display_name: "small"
   properties:
     cores: 2
-    mysql_version: "MYSQL_5_7"
+    mysql_version: "5_7"
     storage_gb: 10
 - name: medium
   id: 753accb8-52a7-4673-8216-ffc539351aea
@@ -37,7 +37,7 @@ plans:
   display_name: "medium"
   properties:
     cores: 4
-    mysql_version: "MYSQL_5_7"
+    mysql_version: "5_7"
     storage_gb: 10
 - name: large
   id: 8f8fc4ab-2b37-41da-bc6a-e915497dac33
@@ -45,7 +45,7 @@ plans:
   display_name: "large"
   properties:
     cores: 8
-    mysql_version: "MYSQL_5_7"
+    mysql_version: "5_7"
     storage_gb: 20
 provision:
   plan_inputs:
@@ -124,8 +124,15 @@ provision:
     default: ${json.marshal(request.default_labels)}
     overwrite: true
     type: object
-  - name: database_version
+  - name: db_version
     default: ${mysql_version}
+    overwrite: true
+    type: string       
+    enum: 
+      5_6: "5_6"
+      5_7: "5_7"
+  - name: db_engine
+    default: MYSQL
     overwrite: true
     type: string       
   template_ref: terraform/cloud-sql-provision.tf
@@ -158,14 +165,10 @@ bind:
     type: integer
     default: ${instance.details["port"]}
     overwrite: true
-  - name: admin_username
+  - name: db_instance_name
     type: string
-    default: ${instance.details["username"]}
-    overwrite: true
-  - name: admin_password
-    type: string
-    default: ${instance.details["password"]}
-    overwrite: true
+    default: ${instance.details["db_instance_name"]}
+    overwrite: true    
   template_ref: terraform/bind-mysql.tf
   outputs: 
   - field_name: username

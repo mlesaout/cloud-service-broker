@@ -29,7 +29,6 @@ plans:
   display_name: "small"
   properties:
     cores: 0.6
-    postgres_version: "POSTGRES_11"
     storage_gb: 10
 - name: medium
   id: b41ee300-8695-11ea-87df-cfcb8aecf3bc
@@ -37,7 +36,6 @@ plans:
   display_name: "medium"
   properties:
     cores: 1.7
-    postgres_version: "POSTGRES_11"
     storage_gb: 20
 provision:
   plan_inputs:
@@ -54,7 +52,11 @@ provision:
     required: true
     type: string
     details: The version for the postgres instance.
-    default: "POSTGRES_11"
+    default: "11"
+    enum:
+      11: "11"
+      10: "10"
+      9_6: "9_6"
   - field_name: storage_gb
     required: true
     type: number
@@ -115,10 +117,14 @@ provision:
     default: ${json.marshal(request.default_labels)}
     overwrite: true
     type: object
-  - name: database_version
+  - name: db_version
     default: ${postgres_version}
     overwrite: true
     type: string       
+  - name: db_engine
+    default: POSTGRES
+    overwrite: true
+    type: string
   template_ref: terraform/cloud-sql-provision.tf
   outputs:
   - field_name: name

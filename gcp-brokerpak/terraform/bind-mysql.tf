@@ -15,8 +15,7 @@
 variable mysql_db_name { type = string }
 variable mysql_hostname { type = string }
 variable mysql_port { type = number }
-variable admin_username { type = string }
-variable admin_password { type = string }
+variable db_instance_name { type = string }
 
 provider "mysql" {
   endpoint = format("%s:%d", var.mysql_hostname, var.mysql_port)
@@ -38,20 +37,13 @@ resource "random_password" "password" {
   min_special = 2
 }    
 
-resource "mysql_user" "newuser" {
-  user               = random_string.username.result
-  plaintext_password = random_password.password.result
-  host = "%"
+resource "google_sql_user" "user" {
+  name     = random_string.username.result
+  instance = var.db_instance_name
+  password = random_password.password.result
 }
 
-resource "mysql_grant" "newuser" {
-  user       = mysql_user.newuser.user
-  database   = var.mysql_db_name
-  host = mysql_user.newuser.host
-  privileges = ["ALL"]
-}
-
-output username { value = mysql_user.newuser.user }
+output username { value = random_string.username.result }
 output password { value = random_password.password.result }
 output uri { 
   value = format("mysql://%s:%s@%s:%d/%s", 
@@ -66,6 +58,6 @@ output jdbcUrl {
                   var.mysql_hostname, 
                   var.mysql_port,
                   var.mysql_db_name, 
-                  mysql_user.newuser.user, 
+                  random_string.username.result, 
                   random_password.password.result) 
 }
