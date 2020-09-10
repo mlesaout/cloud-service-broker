@@ -33,7 +33,7 @@ provision:
     type: string
     details: AWS db id to subsume
     tf_resource: aws_db_instance.db_instance 
-  import_parameters_to_delete: ["address"]         
+  import_parameters_to_delete: ["id","address","replicas","resource_id","status","endpoint","hosted_zone_id","arn"]         
   user_inputs:
   - field_name: aws_access_key_id
     type: string
