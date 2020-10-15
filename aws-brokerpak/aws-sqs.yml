@@ -1,0 +1,171 @@
+# Copyright 2018 the Service Broker Project Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http:#www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+version: 1
+name: csb-aws-sqs
+id: 61f17390-0e44-11eb-bc37-43856e82da9e
+description: Fully managed message queues for microservices, distributed systems, and serverless applications
+display_name: Amazon Simple Queue Service
+image_url: https://www.edrawsoft.com/symbols/awsdatabase/mysqldbinstance.png
+documentation_url: https://aws.amazon.com/rds/mysql/resources/?nc=sn&loc=5
+support_url: https://aws.amazon.com/rds/mysql/resources/?nc=sn&loc=5
+tags: [aws, sqs, preview]
+plans:
+- name: standard
+  id: b9c995f2-0e44-11eb-8604-7b6afc2c4ee1
+  description: 'AWS SQS, maximum throughput, best-effort ordering, and at-least-once delivery'
+  display_name: "standard"
+  properties:
+    delay_seconds: 90
+    max_message_size: 2048
+    fifo_queue: false
+    message_retention_seconds: 345600
+- name: sqs-fifo
+  id: ba8897e0-0e44-11eb-a5d9-d370ca2d0128
+  description: 'SQS FIFO queues are designed to guarantee that messages are processed exactly once, in the exact order that they are sent.'
+  display_name: "sqs-fifo"
+  properties:
+    delay_seconds: 90
+    fifo_queue: true
+    max_message_size: 2048
+    message_retention_seconds: 345600
+provision:
+  plan_inputs:
+  - field_name: delay_seconds
+    required: true
+    type: number
+    details: The time in seconds that the delivery of all messages in the queue will be delayed.
+    default: 90
+    constraints:
+      maximum: 900
+      minimum: 1
+      multipleOf: 1
+  - field_name: fifo_queue
+    type: boolean
+    details: Configure the queue(s) to be FIFO queue(s). 
+    default: false    
+  - field_name: max_message_size
+    required: true
+    type: number
+    details: he limit of how many bytes a message can contain before Amazon SQS rejects it
+    default: 2048
+  - field_name: message_retention_seconds
+    required: true
+    type: number
+    details: The number of seconds Amazon SQS retains a message.
+    defualt: 345600
+    constraints:
+      maximum: 4096
+      minumum: 5
+  user_inputs:
+  - field_name: instance_name
+    type: string
+    details: Name for your mysql instance
+    default: csb-mysql-${request.instance_id}
+    constraints:
+      maxLength: 98
+      minLength: 6
+      pattern: ^[a-z][a-z0-9-]+$
+  - field_name: name_prefix
+    type: string
+    details: Creates a unique name beginning with the specified prefix.
+    default: "cf"
+    constraints:
+      maxLength: 64
+  - field_name: visibility_timeout_seconds
+    type: string
+    details: The timeout in seconds of visibility of the message
+    default: "30"
+  - field_name: max_receive_count
+    type: string
+    details: Maximum receive count
+    default: "5"    
+  - field_name: receive_wait_time_seconds
+    type: string
+    details: The time for which a ReceiveMessage call will wait for a message to arrive (long polling) before returning. An integer from 0 to 20 (seconds). 
+    default: "20"
+  - field_name: dead_letter_queue
+    type: string
+    details: The dead letter queue to use for undeliverable messages 
+    default: ""           
+  - field_name: region
+    type: string
+    details: The region of the mysql instance.
+    default: us-west-2
+    enum: 
+      us-east-2 : us-east-2
+      us-east-1 : us-east-1
+      us-west-1 : us-west-1
+      us-west-2 : us-west-2
+      ap-east-1 : ap-east-1
+      ap-south-1 : ap-south-1
+      ap-northeast-3 : ap-northeast-3
+      ap-northeast-2 : ap-northeast-2
+      ap-southeast-1 : ap-southeast-1
+      ap-southeast-2 : ap-southeast-2
+      ap-northeast-1 : ap-northeast-1
+      ca-central-1 : ca-central-1
+      cn-north-1 : cn-north-1
+      cn-northwest-1 : cn-northwest-1
+      eu-central-1 : eu-central-1
+      eu-west-1 : eu-west-1
+      eu-west-2 : eu-west-2
+      eu-west-3 : eu-west-3
+      eu-north-1 : eu-north-1
+      me-south-1 : me-south-1
+      sa-east-1 : sa-east-1
+  - field_name: multi_az
+    type: boolean
+    details: Make instance multi AZ if true (see https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZ.html)
+    default: false
+  - field_name: aws_access_key_id
+    type: string
+    details: AWS access key
+    default: ${config("aws.access_key_id")}
+  - field_name: aws_secret_access_key
+    type: string
+    details: AWS secret key
+    default: ${config("aws.secret_access_key")}
+  - field_name: aws_vpc_id
+    details: VPC ID for instance
+    default: ""
+  computed_inputs:
+  - name: labels
+    default: ${json.marshal(request.default_labels)}
+    overwrite: true
+    type: object
+  template_ref: terraform/aws-sqs-provision.tf
+  outputs:
+  - field_name: name
+    type: string
+    details: The name of the sqs.
+bind:
+  plan_inputs: []
+  user_inputs: []
+  computed_inputs:
+    - name: sqs_name
+      type: string
+      default: ${instance.details["name"]}
+      overwrite: true
+  template_ref: terraform/aws-sqs-bind.tf
+  outputs: 
+    - field_name: name
+      type: string
+      details: The name to authenticate to the database instance.   
+examples:
+- name: standard
+  description: 'AWS SQS, maximum throughput, best-effort ordering, and at-least-once delivery'
+  plan_id: b9c995f2-0e44-11eb-8604-7b6afc2c4ee1
+  provision_params: {}
+  bind_params: {}
