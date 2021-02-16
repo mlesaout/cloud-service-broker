@@ -1,0 +1,5 @@
+com/example/springbootdynamodb/UniquePrimaryKeyConstraintViolationException.class
+com/example/springbootdynamodb/Customer.class
+com/example/springbootdynamodb/Customer$CustomerBuilder.class
+com/example/springbootdynamodb/DynamodbController.class
+com/example/springbootdynamodb/SpringbootDynamodbApplication.class
