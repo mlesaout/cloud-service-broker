@@ -605,19 +605,6 @@ func TestServiceBroker_Unbind(t *testing.T) {
 				assertEqual(t, "errors should match", brokerapi.ErrBindingDoesNotExist, err)
 			},
 		},
-		"error-getting-request-details": {
-			AsyncService: true,
-			ServiceState: StateBound,
-			Check: func(t *testing.T, broker *ServiceBroker, stub *serviceStub) {
-				encryptor := fakes.FakeEncryptor{}
-				encryptor.DecryptReturnsOnCall(0, nil, errors.New("error while decrypting"))
-				models.SetEncryptor(&encryptor)
-
-				_, err := broker.Unbind(context.Background(), fakeInstanceId, fakeBindingId, stub.UnbindDetails(), true)
-				assertTrue(t, "Should have returned error", err != nil)
-				assertTrue(t, "errors should match", strings.Contains(err.Error(), "error while decrypting"))
-			},
-		},
 	}
 
 	cases.Run(t)

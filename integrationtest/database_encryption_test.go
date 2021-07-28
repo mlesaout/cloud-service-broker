@@ -71,8 +71,10 @@ var _ = Describe("Database Encryption", func() {
 		db, err := gorm.Open("sqlite3", databaseFile)
 		Expect(err).NotTo(HaveOccurred())
 		defer db.Close()
-		record := models.ServiceBindingCredentials{}
-		err = db.Where("service_instance_id = ?", serviceInstanceGUID).First(&record).Error
+		var record struct {
+			OtherDetails string `gorm:"other_details"`
+		}
+		err = db.Table("service_binding_credentials").Where("service_instance_id = ?", serviceInstanceGUID).First(&record).Error
 		Expect(err).NotTo(HaveOccurred())
 		return record.OtherDetails
 	}

@@ -17,6 +17,8 @@ package models
 import (
 	"time"
 
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption"
+
 	"github.com/jinzhu/gorm"
 )
 
@@ -32,7 +34,7 @@ import (
 type ServiceBindingCredentialsV1 struct {
 	gorm.Model
 
-	OtherDetails string `gorm:"type:text"`
+	OtherDetails encryption.EncryptedJSON `gorm:"type:text"`
 
 	ServiceId         string
 	ServiceInstanceId string

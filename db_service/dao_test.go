@@ -18,8 +18,11 @@ package db_service
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
+
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption"
 
 	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service/models"
 	"github.com/jinzhu/gorm"
@@ -210,7 +213,7 @@ func createServiceBindingCredentialsInstance() (uint, models.ServiceBindingCrede
 	instance := models.ServiceBindingCredentials{}
 	instance.ID = testPk
 	instance.BindingId = "0000-0000-0000"
-	instance.OtherDetails = "{\"some\":[\"json\",\"blob\",\"here\"]}"
+	instance.OtherDetails = map[string]interface{}{"some": []interface{}{"json", "blob", "here"}}
 	instance.ServiceId = "1111-1111-1111"
 	instance.ServiceInstanceId = "2222-2222-2222"
 
@@ -223,7 +226,7 @@ func ensureServiceBindingCredentialsFieldsMatch(t *testing.T, expected, actual *
 		t.Errorf("Expected field BindingId to be %#v, got %#v", expected.BindingId, actual.BindingId)
 	}
 
-	if expected.OtherDetails != actual.OtherDetails {
+	if !reflect.DeepEqual(expected.OtherDetails, actual.OtherDetails) {
 		t.Errorf("Expected field OtherDetails to be %#v, got %#v", expected.OtherDetails, actual.OtherDetails)
 	}
 
@@ -241,6 +244,7 @@ func TestSqlDatastore_ServiceBindingCredentialsDAO(t *testing.T) {
 	ds := newInMemoryDatastore(t)
 	testPk, instance := createServiceBindingCredentialsInstance()
 	testCtx := context.Background()
+	encryption.SetEncryptor(encryption.NewNoopEncryptor())
 
 	// on startup, there should be no objects to find or delete
 	exists, err := ds.ExistsServiceBindingCredentialsById(testCtx, testPk)

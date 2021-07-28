@@ -314,9 +314,7 @@ func (broker *ServiceBroker) Bind(ctx context.Context, instanceID, bindingID str
 		ServiceId:         details.ServiceID,
 	}
 
-	if err := newCreds.SetOtherDetails(credsDetails); err != nil {
-		return domain.Binding{}, fmt.Errorf("error serializing credentials: %w. WARNING: these credentials cannot be unbound through cf. Please contact your operator for cleanup", err)
-	}
+	newCreds.OtherDetails = credsDetails
 
 	if err := db_service.CreateServiceBindingCredentials(ctx, &newCreds); err != nil {
 		return domain.Binding{}, fmt.Errorf("error saving credentials to database: %w. WARNING: these credentials cannot be unbound through cf. Please contact your operator for cleanup",

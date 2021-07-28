@@ -36,6 +36,7 @@ var encryptorInstance Encryptor = nil
 
 func SetEncryptor(encryptor Encryptor) {
 	encryptorInstance = encryptor
+	encryption.SetEncryptor(encryptor)
 }
 
 func ConfigureEncryption(encryptionKey string) Encryptor {
@@ -58,38 +59,6 @@ type Encryptor interface {
 // ServiceBindingCredentials holds credentials returned to the users after
 // binding to a service.
 type ServiceBindingCredentials ServiceBindingCredentialsV1
-
-// SetOtherDetails marshals the value passed in into a JSON string and sets
-// OtherDetails to it if marshalling was successful.
-func (sbc *ServiceBindingCredentials) SetOtherDetails(toSet interface{}) error {
-	out, err := json.Marshal(toSet)
-	if err != nil {
-		return err
-	}
-
-	encryptedDetails, err := encryptorInstance.Encrypt(out)
-	if err != nil {
-		return err
-	}
-
-	sbc.OtherDetails = string(encryptedDetails)
-	return nil
-}
-
-// GetOtherDetails returns and unmarshalls the OtherDetails field into the given
-// struct. An empty OtherDetails field does not get unmarshalled and does not error.
-func (sbc ServiceBindingCredentials) GetOtherDetails(v interface{}) error {
-	if sbc.OtherDetails == "" {
-		return nil
-	}
-
-	decryptedDetails, err := encryptorInstance.Decrypt([]byte(sbc.OtherDetails))
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal(decryptedDetails, v)
-}
 
 // ServiceInstanceDetails holds information about provisioned services.
 type ServiceInstanceDetails ServiceInstanceDetailsV2

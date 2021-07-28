@@ -35,11 +35,7 @@ func (b *MergedInstanceCredsMixin) BuildInstanceCredentials(ctx context.Context,
 		return nil, err
 	}
 
-	var bindOtherDetails map[string]interface{}
-	err = bindRecord.GetOtherDetails(&bindOtherDetails)
-	if err != nil {
-		return nil, err
-	}
+	bindOtherDetails := bindRecord.OtherDetails
 
 	var vc *varcontext.VarContext
 	vc, err = varcontext.Builder().
