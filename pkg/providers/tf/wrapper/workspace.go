@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -333,6 +334,25 @@ func (workspace *TerraformWorkspace) Apply(ctx context.Context) error {
 	}
 
 	_, err = workspace.runTf(ctx, "apply", "-auto-approve", "-no-color")
+	return err
+}
+
+func (workspace *TerraformWorkspace) Plan(ctx context.Context) error {
+	err := workspace.initializeFs(ctx)
+	defer workspace.teardownFs()
+	if err != nil {
+		return err
+	}
+
+	output, err := workspace.runTf(ctx, "plan", "-no-color")
+	if err != nil {
+		return err
+	}
+
+	if !regexp.MustCompile(`Plan: \d+ to add, \d+ to change, 0 to destroy.`).MatchString(output.StdOut) {
+		return fmt.Errorf("terraform plan shows that resources would be destroyed - cancelling subsume")
+	}
+
 	return err
 }
 
