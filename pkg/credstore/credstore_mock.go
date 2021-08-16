@@ -77,6 +77,10 @@ func (c *credHubStoreMock) GetValue(key string) (string, error) {
 	return string(content), nil
 }
 
+func (c *credHubStoreMock) GetValueWithID(key string) (string, string, error) {
+	return "", "", nil
+}
+
 func (c *credHubStoreMock) Get(key string) (interface{}, error) {
 	return nil, nil
 }
@@ -91,4 +95,8 @@ func (c *credHubStoreMock) AddPermission(path string, actor string, ops []string
 
 func (c *credHubStoreMock) DeletePermission(path string) error {
 	return nil
+}
+
+func (c *credHubStoreMock) GeneratePassword(path string) (string, string, error) {
+	return "", "", nil
 }

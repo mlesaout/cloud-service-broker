@@ -16,17 +16,18 @@ package cmd
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"fmt"
 	"net/http"
 
-	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service/models"
-
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/brokerapi/brokers"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service"
+	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service/models"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/pkg/broker"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/pkg/brokerpak"
+	"github.com/cloudfoundry-incubator/cloud-service-broker/pkg/credstore"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/pkg/server"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/pkg/toggles"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/utils"
@@ -35,6 +36,7 @@ import (
 	"github.com/pivotal-cf/brokerapi/v8/domain"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/crypto/pbkdf2"
 )
 
 const (
@@ -77,13 +79,22 @@ func init() {
 func serve() {
 	logger := utils.NewLogger("cloud-service-broker")
 	db := db_service.New(logger)
-	models.SetEncryptor(models.ConfigureEncryption(viper.GetString(encryptionKey)))
 
 	// init broker
 	cfg, err := brokers.NewBrokerConfigFromEnv(logger)
 	if err != nil {
 		logger.Fatal("Error initializing service broker config: %s", err)
 	}
+
+	if cfg.Credstore != nil {
+		password, id, err := getPassword(cfg.Credstore)
+		if err != nil {
+			logger.Fatal("Error reading database password from CredHub: %s", err)
+		}
+		key := pbkdf2.Key([]byte(password), []byte(id), 4096, 32, sha256.New)
+		models.SetEncryptor(models.ConfigureEncryption(string(key)))
+	}
+
 	var serviceBroker domain.ServiceBroker
 	serviceBroker, err = brokers.New(cfg, logger)
 	if err != nil {
@@ -140,4 +151,18 @@ func startServer(registry broker.BrokerRegistry, db *sql.DB, brokerapi http.Hand
 	host := viper.GetString(apiHostProp)
 	logger.Info("Serving", lager.Data{"port": port})
 	http.ListenAndServe(fmt.Sprintf("%s:%s", host, port), router)
+}
+
+func getPassword(cs credstore.CredStore) (string, string, error) {
+	const key = "/c/csb/database-password"
+	password, id, err := cs.GetValueWithID(key)
+	if err != nil {
+		return "", "", err
+	}
+
+	if password == "" || id == "" {
+		password, id, err = cs.GeneratePassword(key)
+	}
+
+	return password, id, nil
 }

@@ -20,6 +20,7 @@ import (
 
 	"code.cloudfoundry.org/credhub-cli/credhub"
 	"code.cloudfoundry.org/credhub-cli/credhub/auth"
+	"code.cloudfoundry.org/credhub-cli/credhub/credentials/generate"
 	"code.cloudfoundry.org/credhub-cli/credhub/permissions"
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/pkg/config"
@@ -36,6 +37,8 @@ type CredStore interface {
 	Delete(key string) error
 	AddPermission(path string, actor string, ops []string) (*permissions.Permission, error)
 	DeletePermission(path string) error
+	GetValueWithID(key string) (string, string, error)
+	GeneratePassword(key string) (string, string, error)
 }
 
 type credhubStore struct {
@@ -102,6 +105,14 @@ func (c *credhubStore) GetValue(key string) (string, error) {
 	return string(value.Value), nil
 }
 
+func (c *credhubStore) GetValueWithID(key string) (string, string, error) {
+	value, err := c.credHubClient.GetLatestValue(key)
+	if err != nil {
+		return "", "", err
+	}
+	return string(value.Value), value.Id, nil
+}
+
 func (c *credhubStore) Delete(key string) error {
 	return c.credHubClient.Delete(key)
 }
@@ -129,4 +140,17 @@ func (c *credhubStore) DeletePermission(path string) error {
 	}
 
 	return err
+}
+
+func (c *credhubStore) GeneratePassword(key string) (string, string, error) {
+	opts := generate.Password{
+		Length:         100,
+		IncludeSpecial: true,
+	}
+	password, err := c.credHubClient.GeneratePassword(key, opts, credhub.NoOverwrite)
+	if err != nil {
+		return "", "", err
+	}
+
+	return string(password.Value), password.Id, nil
 }
