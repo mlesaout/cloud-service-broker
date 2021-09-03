@@ -79,11 +79,19 @@ func init() {
 func serve() {
 	logger := utils.NewLogger("cloud-service-broker")
 	db := db_service.New(logger)
+
+	//SetupEncryption(db,.....)
+
 	passwds, err := passwords.ProcessPasswords(viper.GetString(encryptionPasswords), viper.GetBool(encryptionEnabled), db)
 	if err != nil {
 		logger.Fatal("Error setting up database encryption: %s", err)
 	}
 	models.SetEncryptor(models.ConfigureEncryption(passwds.Primary.Secret))
+	if passwds.ChangedPrimary {
+		//models.SetSecondaryEncryptors()
+		//reEncryptDatabase(db, passwds.Secondaries)
+		//saveNewPrimary()
+	}
 
 	// init broker
 	cfg, err := brokers.NewBrokerConfigFromEnv(logger)
