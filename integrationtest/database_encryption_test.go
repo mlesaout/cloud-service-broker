@@ -87,7 +87,7 @@ var _ = FDescribe("Database Encryption", func() {
 		return record.Workspace
 	}
 
-	expectServiceBindingDetailsToNotExist := func() {
+	expectServiceBindingDetailsToNotExist := func(serviceInstanceGUID string) {
 		db, err := gorm.Open(sqlite.Open(databaseFile), &gorm.Config{})
 		Expect(err).NotTo(HaveOccurred())
 		var count int64
@@ -95,7 +95,7 @@ var _ = FDescribe("Database Encryption", func() {
 		Expect(count).To(BeZero())
 	}
 
-	expectServiceInstanceDetailsToNotExist := func() {
+	expectServiceInstanceDetailsToNotExist := func(serviceInstanceGUID string) {
 		db, err := gorm.Open(sqlite.Open(databaseFile), &gorm.Config{})
 		Expect(err).NotTo(HaveOccurred())
 		var count int64

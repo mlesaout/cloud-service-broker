@@ -20,6 +20,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption/compoundencryptor"
+
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/dbencryptor"
+
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/brokerapi/brokers"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service"
@@ -80,18 +84,22 @@ func serve() {
 	logger := utils.NewLogger("cloud-service-broker")
 	db := db_service.New(logger)
 
-	//SetupEncryption(db,.....)
-
 	passwds, err := passwords.ProcessPasswords(viper.GetString(encryptionPasswords), viper.GetBool(encryptionEnabled), db)
 	if err != nil {
 		logger.Fatal("Error setting up database encryption: %s", err)
 	}
-	models.SetEncryptor(models.ConfigureEncryption(passwds.Primary.Secret))
 	if passwds.ChangedPrimary {
-		//models.SetSecondaryEncryptors()
-		//reEncryptDatabase(db, passwds.Secondaries)
-		//saveNewPrimary()
+		logger.Info("password-rotation", lager.Data{"primary": passwds.Primary.Label})
+		models.SetEncryptor(compoundencryptor.NewCompoundEncryptor(passwds.Primary.Encryptor(), passwds.SecondaryEncryptors()))
+		dbencryptor.EncryptDB(db)
 	}
+	switch passwds.Primary.Label {
+	case "":
+		logger.Info("database-encryption-disabled")
+	default:
+		logger.Info("database-encryption-enabled")
+	}
+	models.SetEncryptor(passwds.Primary.Encryptor())
 
 	// init broker
 	cfg, err := brokers.NewBrokerConfigFromEnv(logger)

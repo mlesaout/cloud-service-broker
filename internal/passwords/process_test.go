@@ -1,9 +1,6 @@
 package passwords_test
 
 import (
-	"os"
-
-	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service/models"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/passwords"
 	. "github.com/onsi/ginkgo"
@@ -14,24 +11,13 @@ import (
 
 var _ = Describe("Password Manager", func() {
 	Describe("ProcessPasswords()", func() {
-		var (
-			db           *gorm.DB
-			databaseFile string
-		)
+		var db *gorm.DB
 
 		BeforeEach(func() {
-			fh, err := os.CreateTemp("", "")
+			var err error
+			db, err = gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 			Expect(err).NotTo(HaveOccurred())
-			databaseFile = fh.Name()
-			fh.Close()
-
-			db, err = gorm.Open(sqlite.Open(databaseFile), &gorm.Config{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(db_service.RunMigrations(db)).NotTo(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			os.Remove(databaseFile)
+			Expect(db.Migrator().CreateTable(&models.PasswordMetadata{})).NotTo(HaveOccurred())
 		})
 
 		It("returns a primary password", func() {

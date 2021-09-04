@@ -6,10 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"reflect"
-	"strings"
 
-	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption"
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption/gcmencryptor"
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption/noopencryptor"
 
 	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service/models"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service/models/fakes"
@@ -34,7 +33,7 @@ var _ = Describe("Db", func() {
 		Context("GCM encryptor", func() {
 			BeforeEach(func() {
 				key := newKey()
-				encryptor = encryption.NewGCMEncryptor(&key)
+				encryptor = gcmencryptor.NewGCMEncryptor(&key)
 				models.SetEncryptor(encryptor)
 			})
 
@@ -84,7 +83,7 @@ var _ = Describe("Db", func() {
 
 		Context("Noop encryptor", func() {
 			BeforeEach(func() {
-				encryptor = encryption.NewNoopEncryptor()
+				encryptor = noopencryptor.NewNoopEncryptor()
 				models.SetEncryptor(encryptor)
 			})
 
@@ -204,7 +203,7 @@ var _ = Describe("Db", func() {
 		Context("GCM encryptor", func() {
 			BeforeEach(func() {
 				key := newKey()
-				encryptor = encryption.NewGCMEncryptor(&key)
+				encryptor = gcmencryptor.NewGCMEncryptor(&key)
 				models.SetEncryptor(encryptor)
 			})
 
@@ -292,7 +291,7 @@ var _ = Describe("Db", func() {
 
 		Context("Noop encryptor", func() {
 			BeforeEach(func() {
-				encryptor = encryption.NewNoopEncryptor()
+				encryptor = noopencryptor.NewNoopEncryptor()
 				models.SetEncryptor(encryptor)
 			})
 
@@ -438,7 +437,7 @@ var _ = Describe("Db", func() {
 		Context("GCM encryptor", func() {
 			BeforeEach(func() {
 				key := newKey()
-				encryptor = encryption.NewGCMEncryptor(&key)
+				encryptor = gcmencryptor.NewGCMEncryptor(&key)
 				models.SetEncryptor(encryptor)
 			})
 
@@ -506,7 +505,7 @@ var _ = Describe("Db", func() {
 
 		Context("Noop encryptor", func() {
 			BeforeEach(func() {
-				encryptor = encryption.NewNoopEncryptor()
+				encryptor = noopencryptor.NewNoopEncryptor()
 				models.SetEncryptor(encryptor)
 			})
 
@@ -604,7 +603,7 @@ var _ = Describe("Db", func() {
 		Context("GCM encryptor", func() {
 			BeforeEach(func() {
 				key := newKey()
-				encryptor = encryption.NewGCMEncryptor(&key)
+				encryptor = gcmencryptor.NewGCMEncryptor(&key)
 				models.SetEncryptor(encryptor)
 			})
 
@@ -645,7 +644,7 @@ var _ = Describe("Db", func() {
 
 		Context("Noop encryptor", func() {
 			BeforeEach(func() {
-				encryptor = encryption.NewNoopEncryptor()
+				encryptor = noopencryptor.NewNoopEncryptor()
 				models.SetEncryptor(encryptor)
 			})
 
@@ -699,46 +698,6 @@ var _ = Describe("Db", func() {
 					v, err := t.GetWorkspace()
 					Expect(err).To(MatchError("fake decryption error"))
 					Expect(v).To(BeEmpty())
-				})
-			})
-		})
-	})
-
-	Describe("ConfigureEncryption", func() {
-		Context("No key provided", func() {
-			When("Key is empty", func() {
-				It("Skips encryption", func() {
-					encryptor := models.ConfigureEncryption("")
-
-					Expect(encryptor).To(Equal(encryption.NewNoopEncryptor()))
-				})
-			})
-
-			When("Key is blank", func() {
-				It("Skips encryption", func() {
-					encryptor := models.ConfigureEncryption("    \t   \n")
-
-					Expect(encryptor).To(Equal(encryption.NewNoopEncryptor()))
-				})
-			})
-		})
-
-		Context("Key provided", func() {
-			When("Key is valid", func() {
-				It("Sets up encryptor with the key", func() {
-					encryptor := models.ConfigureEncryption("one-key-here-with-32-bytes-in-it")
-
-					Expect(reflect.TypeOf(encryptor).Name()).To(Equal("GCMEncryptor"))
-					gcmEncryptor, _ := encryptor.(encryption.GCMEncryptor)
-					Expect(strings.TrimSpace(string(gcmEncryptor.Key[:]))).To(Equal("one-key-here-with-32-bytes-in-it"))
-				})
-			})
-
-			When("Key has surrounding spaces", func() {
-				It("skips encryption", func() {
-					encryptor := models.ConfigureEncryption("\t  one-key-here  \n")
-
-					Expect(encryptor).To(Equal(encryption.NewNoopEncryptor()))
 				})
 			})
 		})

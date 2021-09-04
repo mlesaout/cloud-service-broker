@@ -3,6 +3,8 @@ package dbencryptor_test
 import (
 	"context"
 
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption/noopencryptor"
+
 	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service/models"
 	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/dbencryptor"
@@ -15,48 +17,91 @@ import (
 )
 
 var _ = Describe("EncryptDB", func() {
+	const (
+		serviceInstanceIdQuery = "id = ?"
+		tfWorkspaceIdQuery     = "id = ?"
+		serviceInstanceFKQuery = "service_instance_id = ?"
+		jsonSecret             = `{"a":"secret"}`
+	)
+
 	var (
-		db                      *gorm.DB
-		provisionRequestDetails models.ProvisionRequestDetails
+		db                        *gorm.DB
+		serviceInstanceDetails    models.ServiceInstanceDetails
+		provisionRequestDetails   models.ProvisionRequestDetails
+		serviceBindingCredentials models.ServiceBindingCredentials
+		terraformDeployment       models.TerraformDeployment
+		mapSecret                 map[string]interface{}
 	)
 
 	BeforeEach(func() {
-		db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+		var err error
+		db, err = gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(db_service.RunMigrations(db)).NotTo(HaveOccurred())
+		db.Migrator().CreateTable(models.ServiceInstanceDetails{})
+		db.Migrator().CreateTable(models.ServiceBindingCredentials{})
+		db.Migrator().CreateTable(models.ProvisionRequestDetails{})
+		db.Migrator().CreateTable(models.TerraformDeployment{})
 
 		db_service.DbConnection = db
-		models.SetEncryptor(models.ConfigureEncryption(""))
+		models.SetEncryptor(noopencryptor.NewNoopEncryptor())
+
+		mapSecret = map[string]interface{}{"a": "secret"}
+
+		serviceInstanceDetails = models.ServiceInstanceDetails{}
+		serviceInstanceDetails.SetOtherDetails(mapSecret)
+		Expect(db_service.CreateServiceInstanceDetails(context.TODO(), &serviceInstanceDetails)).NotTo(HaveOccurred())
+
+		serviceBindingCredentials = models.ServiceBindingCredentials{}
+		serviceBindingCredentials.SetOtherDetails(mapSecret)
+		Expect(db_service.CreateServiceBindingCredentials(context.TODO(), &serviceBindingCredentials)).NotTo(HaveOccurred())
 
 		provisionRequestDetails = models.ProvisionRequestDetails{ServiceInstanceId: uuid.New()}
-		Expect(provisionRequestDetails.SetRequestDetails([]byte(`{"a":"secret"}`))).NotTo(HaveOccurred())
+		Expect(provisionRequestDetails.SetRequestDetails([]byte(jsonSecret))).NotTo(HaveOccurred())
 		Expect(db_service.CreateProvisionRequestDetails(context.TODO(), &provisionRequestDetails)).NotTo(HaveOccurred())
+
+		terraformDeployment = models.TerraformDeployment{}
+		terraformDeployment.SetWorkspace(jsonSecret)
+		Expect(db_service.CreateTerraformDeployment(context.TODO(), &terraformDeployment)).NotTo(HaveOccurred())
 	})
 
-	const serviceInstanceFKQuery = "service_instance_id = ?"
-
-	findRecord := func(dest interface{}, query, guid string) {
-		err := db.Where(query, guid).First(dest).Error
-		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	persistedServiceInstanceDetails := func() string {
+		record := models.ServiceInstanceDetails{}
+		Expect(db.First(&record).Error).NotTo(HaveOccurred())
+		return record.OtherDetails
 	}
 
-	persistedRequestDetails := func(serviceInstanceGUID string) string {
+	persistedRequestDetails := func() string {
 		record := models.ProvisionRequestDetails{}
-		findRecord(&record, serviceInstanceFKQuery, serviceInstanceGUID)
+		Expect(db.First(&record).Error).NotTo(HaveOccurred())
 		return record.RequestDetails
 	}
 
-	It("encrypts the database", func() {
-		models.SetEncryptor(dbencryptor.NewCompoundEncryptor(
-			models.ConfigureEncryption("one-key-here-with-32-bytes-in-it"),
-			encryption.NoopEncryptor{},
-		))
+	persistedServiceBindingDetails := func() string {
+		record := models.ServiceBindingCredentials{}
+		Expect(db.First(&record).Error).NotTo(HaveOccurred())
+		return record.OtherDetails
+	}
 
-		Expect(persistedRequestDetails(provisionRequestDetails.ServiceInstanceId)).To(Equal(`{"a":"secret"}`))
+	persistedTerraformWorkspace := func() string {
+		record := models.TerraformDeployment{}
+		Expect(db.First(&record).Error).NotTo(HaveOccurred())
+		return record.Workspace
+	}
+
+	FIt("encrypts the database", func() {
+		models.SetEncryptor(encryption.EncryptorFromKeys("one-key-here-with-32-bytes-in-it", ""))
+
+		Expect(persistedServiceInstanceDetails()).To(Equal(jsonSecret))
+		Expect(persistedRequestDetails()).To(Equal(jsonSecret))
+		Expect(persistedServiceBindingDetails()).To(Equal(jsonSecret))
+		Expect(persistedTerraformWorkspace()).To(Equal(jsonSecret))
 
 		By("running the encryption")
-		Expect(dbencryptor.EncryptDB(context.TODO(), db)).NotTo(HaveOccurred())
+		Expect(dbencryptor.EncryptDB(db)).NotTo(HaveOccurred())
 
-		Expect(persistedRequestDetails(provisionRequestDetails.ServiceInstanceId)).NotTo(Equal(`{"a":"secret"}`))
+		Expect(persistedServiceInstanceDetails()).NotTo(Equal(jsonSecret))
+		Expect(persistedRequestDetails()).NotTo(Equal(jsonSecret))
+		Expect(persistedServiceBindingDetails()).NotTo(Equal(jsonSecret))
+		Expect(persistedTerraformWorkspace()).NotTo(Equal(jsonSecret))
 	})
 })

@@ -1,8 +1,11 @@
-package dbencryptor
+package compoundencryptor
 
-import "github.com/cloudfoundry-incubator/cloud-service-broker/db_service/models"
+type Encryptor interface {
+	Encrypt(plaintext []byte) (string, error)
+	Decrypt(ciphertext string) ([]byte, error)
+}
 
-func NewCompoundEncryptor(primary models.Encryptor, secondaries ...models.Encryptor) models.Encryptor {
+func NewCompoundEncryptor(primary Encryptor, secondaries ...Encryptor) Encryptor {
 	return CompoundEncryptor{
 		primary:     primary,
 		secondaries: secondaries,
@@ -10,8 +13,8 @@ func NewCompoundEncryptor(primary models.Encryptor, secondaries ...models.Encryp
 }
 
 type CompoundEncryptor struct {
-	primary     models.Encryptor
-	secondaries []models.Encryptor
+	primary     Encryptor
+	secondaries []Encryptor
 }
 
 func (c CompoundEncryptor) Encrypt(plaintext []byte) (string, error) {
@@ -19,7 +22,7 @@ func (c CompoundEncryptor) Encrypt(plaintext []byte) (string, error) {
 }
 
 func (c CompoundEncryptor) Decrypt(ciphertext string) (data []byte, err error) {
-	for _, decryptor := range append([]models.Encryptor{c.primary}, c.secondaries...) {
+	for _, decryptor := range append([]Encryptor{c.primary}, c.secondaries...) {
 		data, err = decryptor.Decrypt(ciphertext)
 		if err == nil {
 			return data, nil

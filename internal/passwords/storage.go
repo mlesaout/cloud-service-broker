@@ -1,15 +1,13 @@
 package passwords
 
 import (
-	"errors"
-
 	"github.com/cloudfoundry-incubator/cloud-service-broker/db_service/models"
 	"gorm.io/gorm"
 )
 
 type passwordMetadata struct {
 	Label   string
-	Salt    [32]byte
+	Salt    []byte
 	Canary  string
 	Primary bool
 }
@@ -17,7 +15,7 @@ type passwordMetadata struct {
 func savePasswordMetadata(db *gorm.DB, p passwordMetadata) error {
 	return db.Create(&models.PasswordMetadata{
 		Label:   p.Label,
-		Salt:    p.Salt[:],
+		Salt:    p.Salt,
 		Canary:  p.Canary,
 		Primary: p.Primary,
 	}).Error
@@ -32,22 +30,19 @@ func findPasswordMetadataForPrimary(db *gorm.DB) (passwordMetadata, bool, error)
 }
 
 func findPasswordMetadata(db *gorm.DB, query interface{}, args ...interface{}) (passwordMetadata, bool, error) {
-	var receiver models.PasswordMetadata
-	err := db.Where(query, args...).First(&receiver).Error
-	switch {
-	case errors.Is(err, gorm.ErrRecordNotFound):
-		return passwordMetadata{}, false, nil
-	case err != nil:
+	var receiver []models.PasswordMetadata
+	if err := db.Where(query, args...).Find(&receiver).Error; err != nil {
 		return passwordMetadata{}, false, err
 	}
 
-	var salt [32]byte
-	copy(salt[:], receiver.Salt)
+	if len(receiver) == 0 {
+		return passwordMetadata{}, false, nil
+	}
 
 	return passwordMetadata{
-		Label:   receiver.Label,
-		Salt:    salt,
-		Canary:  receiver.Canary,
-		Primary: receiver.Primary,
+		Label:   receiver[0].Label,
+		Salt:    receiver[0].Salt,
+		Canary:  receiver[0].Canary,
+		Primary: receiver[0].Primary,
 	}, true, nil
 }

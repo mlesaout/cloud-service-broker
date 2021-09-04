@@ -1,105 +1,40 @@
 package encryption_test
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
-	b64 "encoding/base64"
-	"io"
-
-	. "github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption"
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption"
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption/compoundencryptor"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption/gcmencryptor"
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/encryption/noopencryptor"
 )
 
-func newKey() [32]byte {
-	dbKey := make([]byte, 32)
-	io.ReadFull(rand.Reader, dbKey)
-	return sha256.Sum256(dbKey)
-}
-
-var _ = Describe("GCMEncryptor", func() {
-	var encryptor GCMEncryptor
-	BeforeEach(func() {
-		key := newKey()
-		encryptor = NewGCMEncryptor(&key)
-	})
-
-	It("can decrypt what it encrypted", func() {
-		encrypted, err := encryptor.Encrypt([]byte("Text to Encrypt"))
-		Expect(err).ToNot(HaveOccurred())
-		Expect(encrypted).ToNot(ContainSubstring("Encrypt"))
-
-		decrypted, err := encryptor.Decrypt(encrypted)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(string(decrypted)).To(Equal("Text to Encrypt"))
-
-	})
-
-	Describe("Encrypt", func() {
-		It("encrypts data using a nonce", func() {
-			By("encrypting a few times and checking we dont get the same result")
-			const textToEncrypt = "Text to Encrypt"
-			result1, err := encryptor.Encrypt([]byte(textToEncrypt))
-			Expect(err).ToNot(HaveOccurred())
-			result2, err := encryptor.Encrypt([]byte(textToEncrypt))
-			Expect(err).ToNot(HaveOccurred())
-			Expect(result2).ToNot(Equal(result1))
-			result3, err := encryptor.Encrypt([]byte(textToEncrypt))
-			Expect(err).ToNot(HaveOccurred())
-			Expect(result3).ToNot(Equal(result1))
-			Expect(result3).ToNot(Equal(result2))
-		})
-
-		It("encodes in b64", func() {
-			encoded, err := encryptor.Encrypt([]byte("Text to Encrypt"))
-			Expect(err).ToNot(HaveOccurred())
-			_, err = b64.StdEncoding.DecodeString(encoded)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-	})
-
-	Describe("Decrypt", func() {
-		It("returns an error if input not in b64", func() {
-			result, err := encryptor.Decrypt("some string not in b64")
-			Expect(err).To(MatchError(b64.CorruptInputError(4)))
-			Expect(result).To(BeNil())
-		})
-
-		It("fails if text is malformed", func() {
-			encoded := b64.StdEncoding.EncodeToString([]byte("shorter"))
-			result, err := encryptor.Decrypt(encoded)
-			Expect(err).To(MatchError("malformed ciphertext"))
-			Expect(result).To(BeNil())
-		})
-
-		It("fails if text is corrupted", func() {
-			encoded := b64.StdEncoding.EncodeToString([]byte("longtextthatdoesnotcontainthetag"))
-			result, err := encryptor.Decrypt(encoded)
-			Expect(err).To(MatchError("cipher: message authentication failed"))
-			Expect(result).To(BeNil())
-		})
-	})
-})
-
-var _ = Describe("NoopEncryptor", func() {
-	var encryptor NoopEncryptor
-
-	BeforeEach(func() {
-		encryptor = NewNoopEncryptor()
-	})
-
-	Describe("Encrypt", func() {
-		It("is a noop", func() {
-			const text = "my funny text to encrypt"
-			Expect(encryptor.Encrypt([]byte(text))).To(Equal(text))
+var _ = Describe("Encryption", func() {
+	When("valid key is provided", func() {
+		It("returns a GCM Encryptor", func() {
+			const validKey = "one-key-here-with-32-bytes-in-it"
+			Expect(encryption.EncryptorFromKeys(validKey)).To(BeAssignableToTypeOf(gcmencryptor.GCMEncryptor{}))
 		})
 	})
 
-	Describe("Decrypt", func() {
-		It("is a noop", func() {
-			const text = "my funny text to decrypt"
-			Expect(encryptor.Decrypt(text)).To(Equal([]byte(text)))
+	When("no key provided", func() {
+		It("returns a no-op encryptor", func() {
+			Expect(encryption.EncryptorFromKeys()).To(BeAssignableToTypeOf(noopencryptor.NoopEncryptor{}))
+		})
+	})
+
+	When("blank key provided", func() {
+		It("returns a no-op encryptor", func() {
+			Expect(encryption.EncryptorFromKeys(" ")).To(BeAssignableToTypeOf(noopencryptor.NoopEncryptor{}))
+		})
+	})
+
+	When("multiple keys provided", func() {
+		It("returns a compound encryptor", func() {
+			const validKey1 = "one-key-here-with-32-bytes-in-it"
+			const validKey2 = "another-32-great-bytes-inside-it"
+			Expect(encryption.EncryptorFromKeys(validKey1, " ", validKey2)).To(BeAssignableToTypeOf(compoundencryptor.CompoundEncryptor{}))
 		})
 	})
 })

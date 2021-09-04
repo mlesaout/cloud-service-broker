@@ -3,15 +3,11 @@ package passwords
 import (
 	"fmt"
 
+	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/passwords/saltedpassword"
+
 	"github.com/cloudfoundry-incubator/cloud-service-broker/internal/passwords/parser"
 	"gorm.io/gorm"
 )
-
-type Passwords struct {
-	Primary        Password
-	Secondaries    []Password
-	ChangedPrimary bool
-}
 
 func ProcessPasswords(input string, encryptionEnabled bool, db *gorm.DB) (Passwords, error) {
 	parsedPasswords, err := parse(input, encryptionEnabled)
@@ -51,11 +47,11 @@ func ProcessPasswords(input string, encryptionEnabled bool, db *gorm.DB) (Passwo
 	return result, nil
 }
 
-func consolidate(parsed parser.PasswordEntry, db *gorm.DB) (Password, error) {
+func consolidate(parsed parser.PasswordEntry, db *gorm.DB) (saltedpassword.SaltedPassword, error) {
 	loaded, ok, err := findPasswordMetadataForLabel(db, parsed.Label)
 	switch {
 	case err != nil:
-		return Password{}, err
+		return saltedpassword.SaltedPassword{}, err
 	case ok:
 		return checkRecord(loaded, parsed)
 	default:
@@ -63,35 +59,30 @@ func consolidate(parsed parser.PasswordEntry, db *gorm.DB) (Password, error) {
 	}
 }
 
-func checkRecord(loaded passwordMetadata, parsed parser.PasswordEntry) (Password, error) {
-	result := Password{
-		Label:  parsed.Label,
-		Secret: parsed.Secret,
-		Salt:   loaded.Salt,
+func checkRecord(loaded passwordMetadata, parsed parser.PasswordEntry) (saltedpassword.SaltedPassword, error) {
+	sp, err := saltedpassword.New(parsed.Label, parsed.Secret, loaded.Salt[:])
+	if err != nil {
+		return saltedpassword.SaltedPassword{}, err
 	}
 
-	if err := decryptCanary(result.Key(), loaded.Canary, parsed.Label); err != nil {
-		return Password{}, err
+	if err := decryptCanary(sp.Encryptor, loaded.Canary, parsed.Label); err != nil {
+		return saltedpassword.SaltedPassword{}, err
 	}
 
-	return result, nil
+	return sp, nil
 }
 
-func newRecord(parsed parser.PasswordEntry, db *gorm.DB) (Password, error) {
+func newRecord(parsed parser.PasswordEntry, db *gorm.DB) (saltedpassword.SaltedPassword, error) {
 	salt, err := randomSalt()
 	if err != nil {
-		return Password{}, err
+		return saltedpassword.SaltedPassword{}, err
 	}
 
-	result := Password{
-		Label:  parsed.Label,
-		Secret: parsed.Secret,
-		Salt:   salt,
-	}
+	sp, err := saltedpassword.New(parsed.Label, parsed.Secret, salt)
 
-	canary, err := encryptCanary(result.Key())
+	canary, err := encryptCanary(sp.Encryptor)
 	if err != nil {
-		return Password{}, err
+		return saltedpassword.SaltedPassword{}, err
 	}
 
 	err = savePasswordMetadata(db, passwordMetadata{
@@ -101,8 +92,8 @@ func newRecord(parsed parser.PasswordEntry, db *gorm.DB) (Password, error) {
 		Primary: false,
 	})
 	if err != nil {
-		return Password{}, err
+		return saltedpassword.SaltedPassword{}, err
 	}
 
-	return result, nil
+	return sp, nil
 }
